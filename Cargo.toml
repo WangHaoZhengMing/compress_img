@@ -1,0 +1,14 @@
+[package]
+name = "compressed"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+image = "0.25.8"
+rfd = "0.14"
+slint = { version = "1.13.1", features = ["std"] }
+walkdir = "2.5"
+
+[build-dependencies]
+slint-build = "1.13.1"

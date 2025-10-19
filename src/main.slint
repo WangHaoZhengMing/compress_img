@@ -1,0 +1,116 @@
+import { Button, GroupBox, LineEdit, Slider, TextEdit, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+	title: "批量图像压缩";
+	preferred-width: 520px;
+	preferred-height: 460px;
+
+	in-out property <string> selected_folder: "";
+	in-out property <float> jpeg_quality: 80.0;
+	in-out property <bool> busy: false;
+	in-out property <string> status_text: "请选择一个文件夹";
+	in-out property <int> processed_files: 0;
+	in-out property <int> total_files: 0;
+	in-out property <float> progress: 0.0;
+	in-out property <string> log_text: "";
+
+	callback pick_folder();
+	callback start_compress();
+
+	VerticalBox {
+		spacing: 12px;
+		padding: 18px;
+
+		Text {
+			text: "图像批量压缩工具";
+			font-size: 20px;
+			horizontal-alignment: center;
+		}
+
+		HorizontalBox {
+			spacing: 8px;
+			LineEdit {
+				read-only: true;
+				text: root.selected_folder;
+				placeholder-text: "未选择文件夹";
+				horizontal-stretch: 1;
+			}
+			Button {
+				text: "选择文件夹";
+				enabled: !root.busy;
+				clicked => { root.pick_folder(); }
+			}
+		}
+
+		GroupBox {
+			title: "JPEG 质量设置";
+			VerticalBox {
+				spacing: 6px;
+				HorizontalBox {
+					spacing: 8px;
+					Slider {
+						enabled: !root.busy;
+						minimum: 40.0;
+						maximum: 95.0;
+						value <=> root.jpeg_quality;
+						horizontal-stretch: 1;
+					}
+					Text {
+						width: 48px;
+						horizontal-alignment: center;
+						text: "" + root.jpeg_quality.round();
+					}
+				}
+				Text {
+					font-size: 12px;
+					color: #666666;
+					text: "数值越小压缩越强，推荐 60-85";
+				}
+			}
+		}
+
+		GroupBox {
+			title: "进度";
+			VerticalBox {
+				spacing: 6px;
+				Text {
+					wrap: word-wrap;
+					text: root.status_text;
+				}
+				Text {
+					text: "已处理 " + root.processed_files + " / " + root.total_files;
+				}
+				Rectangle {
+					height: 16px;
+					border-radius: 8px;
+					background: #e0e0e0;
+					horizontal-stretch: 1;
+					clip: true;
+
+					Rectangle {
+						background: #4a90e2;
+						width: parent.width * (root.total_files > 0 ? root.progress : 0.0);
+						height: parent.height;
+					}
+				}
+			}
+		}
+
+		GroupBox {
+			title: "日志";
+			vertical-stretch: 1;
+			TextEdit {
+				read-only: true;
+				wrap: word-wrap;
+				vertical-stretch: 1;
+				text: root.log_text;
+			}
+		}
+
+		Button {
+			text: "开始压缩";
+			enabled: !root.busy && root.selected_folder != "";
+			clicked => { root.start_compress(); }
+		}
+	}
+}
