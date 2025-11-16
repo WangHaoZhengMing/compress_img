@@ -56,21 +56,21 @@ jobs:
         run: |
           mkdir dist
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            cp target/release/question_tool.exe dist/
-            cd dist && 7z a question_tool-${{ matrix.os }}.zip question_tool.exe
+            cp target/release/compress_img.exe dist/
+            cd dist && 7z a compress_img-${{ matrix.os }}.zip compress_img.exe
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            cp target/release/question_tool dist/
-            cd dist && tar -czvf question_tool-${{ matrix.os }}.tar.gz question_tool
+            cp target/release/compress_img dist/
+            cd dist && tar -czvf compress_img-${{ matrix.os }}.tar.gz compress_img
           else
-            cp target/release/question_tool dist/
-            cd dist && tar -czvf question_tool-${{ matrix.os }}.tar.gz question_tool
+            cp target/release/compress_img dist/
+            cd dist && tar -czvf compress_img-${{ matrix.os }}.tar.gz compress_img
           fi
 
       # 上传制品供下一步 Release 使用
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: question_tool-${{ matrix.os }}
+          name: compress_img-${{ matrix.os }}
           path: dist/*
   release:
     needs: build
