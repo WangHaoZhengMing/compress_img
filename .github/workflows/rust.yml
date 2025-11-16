@@ -1,0 +1,106 @@
+name: Build & Release (Rust Multi-platform)
+
+on:
+  workflow_dispatch: # 允许手动触发
+  push:
+    tags:
+      - "v*"    # 只有在打 tag 时才触发，用于正式发布
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      # 安装系统依赖（主要是为了 Slint GUI）
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libfreetype6-dev libx11-dev libxrandr-dev libgl1-mesa-dev
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # macOS 通常不需要额外依赖，但如果需要可以在这里添加
+          echo "No additional dependencies needed for macOS"
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release --verbose
+
+      # 压缩构建产物（根据不同系统执行不同命令）
+      - name: Package executable
+        shell: bash
+        run: |
+          mkdir dist
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp target/release/question_tool.exe dist/
+            cd dist && 7z a question_tool-${{ matrix.os }}.zip question_tool.exe
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            cp target/release/question_tool dist/
+            cd dist && tar -czvf question_tool-${{ matrix.os }}.tar.gz question_tool
+          else
+            cp target/release/question_tool dist/
+            cd dist && tar -czvf question_tool-${{ matrix.os }}.tar.gz question_tool
+          fi
+
+      # 上传制品供下一步 Release 使用
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: question_tool-${{ matrix.os }}
+          path: dist/*
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')  # 只有在打 tag 时才创建 release
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create Release & Upload Files
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# 如何使用 tag 触发此 workflow:
+#
+# 1. 首先，确保你的代码已经提交到本地 git 仓库。
+#    git add .
+#    git commit -m "Your commit message"
+#
+# 2. 然后，在本地打上一个新的 tag。版本号建议遵循语义化版本规范 (https://semver.org/lang/zh-CN/)。
+#    例如，创建一个 v1.0.0 的 tag:
+#    git tag v1.0.0
+#
+# 3. 最后，将这个 tag 推送到远程 GitHub 仓库。
+#    git push origin v1.0.0
+#
+#    推送 tag 后，GitHub Actions 就会自动开始执行此 workflow。
+#    你可以在 GitHub 仓库的 "Actions" 标签页下看到运行状态。
